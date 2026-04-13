@@ -43,13 +43,17 @@ dev = [
     "pymdown-extensions",
     "mkdocs-click",
     "pytest-asyncio",
+    "lxml",
+    "python-dotenv",
+    "pandas",
+    "paramiko"
 ]
 
 [tool.uv]
 extra-index-url = [
   "https://gitlab.mpcdf.mpg.de/api/v4/projects/2187/packages/pypi/simple",
 ]
-    
+
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
 exclude = [

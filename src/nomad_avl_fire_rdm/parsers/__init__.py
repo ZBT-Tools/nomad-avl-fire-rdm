@@ -14,5 +14,5 @@ class NewParserEntryPoint(ParserEntryPoint):
 parser_entry_point = NewParserEntryPoint(
     name='NewParser',
     description='New parser entry point configuration.',
-    mainfile_name_re=r'.*\.newmainfilename',
+    mainfile_name_re=r'.*\.json',
 )

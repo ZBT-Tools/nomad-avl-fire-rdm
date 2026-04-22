@@ -2,6 +2,8 @@ from typing import (
     TYPE_CHECKING,
 )
 
+from nomad_avl_fire_rdm.helpers.asix_parser import parse_asix
+
 if TYPE_CHECKING:
     from nomad.datamodel.datamodel import (
         EntryArchive,
@@ -20,11 +22,12 @@ import paramiko
 from nomad.config import config
 from nomad.datamodel.metainfo.workflow import Workflow
 from nomad.parsing.parser import MatchingParser
+import json
 
-from ..helpers.firem_name_parser_integration import firem_parser
+import nomad_avl_fire_rdm.helpers.firem_name_parser_integration as firem_parser
+
 
 importlib.reload(firem_parser)
-from ..helpers.asix_parser import parse_asix
 from ..helpers.firem_name_parser_integration import (
     load_yaml_from_github,
     normalize_2d_results_columns,
@@ -79,10 +82,15 @@ class NewParser(MatchingParser):
         child_archives: dict[str, 'EntryArchive'] = None,
     ) -> None:
         logger.info('NewParser.parse', parameter=configuration.parameter)
+        print(mainfile)
+
         dotenv.load_dotenv()
-        hostname = os.getenv('HOSTNAME')  # Replace with your server's IP or hostname
-        user = os.getenv('USER')  # Replace with your SSH username
-        password = os.getenv('PASSWORD')  # SSH password from .env file
+        with open(mainfile, 'r') as f:
+            config = json.load(f)
+
+        hostname = config['hostname']
+        user = config['USER']
+        password = config['PASSWORD']
 
         PROJECT_DIRECTORY = '/mnt/data_raid/feierabend/AVL_FIRE/PEMWE/PEMStar_2'  # Project directory on the remote server
         MODEL_NAME = 'PEMStar_BekaertPTL'  # AVL FIRE model name

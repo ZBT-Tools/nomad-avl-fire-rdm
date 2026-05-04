@@ -46,7 +46,8 @@ dev = [
     "lxml",
     "python-dotenv",
     "pandas",
-    "paramiko"
+    "paramiko",
+    "avl-fire-rdm @ git+https://github.com/ZBT-Tools/AVL-FIRE-RDM.git"
 ]
 
 [tool.uv]

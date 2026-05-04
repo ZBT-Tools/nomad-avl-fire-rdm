@@ -3,7 +3,7 @@ from pydantic import Field
 
 
 class NewParserEntryPoint(ParserEntryPoint):
-    parameter: int = Field(0, description='Custom configuration parameter')
+    parameter: int = Field(0, description="Custom configuration parameter")
 
     def load(self):
         from nomad_avl_fire_rdm.parsers.parser import NewParser
@@ -12,7 +12,7 @@ class NewParserEntryPoint(ParserEntryPoint):
 
 
 parser_entry_point = NewParserEntryPoint(
-    name='NewParser',
-    description='New parser entry point configuration.',
-    mainfile_name_re=r'.*\.json',
+    name="NewParser",
+    description="New parser entry point configuration.",
+    mainfile_name_re=r".*\.yaml",
 )

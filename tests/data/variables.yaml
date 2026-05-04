@@ -1,0 +1,6 @@
+hostname: "172.16.10.138"
+USER: "simulation"
+PASSWORD: "sim_pw_2023"
+PROJECT_DIRECTORY: "/mnt/data_raid/feierabend/AVL_FIRE/PEMWE/PEMStar_2"
+MODEL_NAME: "PEMStar_BekaertPTL"
+CASE_SET_NAME: "PolCurve_Bek~rtPTL_Update"

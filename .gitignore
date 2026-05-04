@@ -131,3 +131,4 @@ dmypy.json
 
 
 variables.json
+*.hdf5

@@ -4,3 +4,12 @@ PASSWORD: "sim_pw_2023"
 PROJECT_DIRECTORY: "/mnt/data_raid/feierabend/AVL_FIRE/PEMWE/PEMStar_2"
 MODEL_NAME: "PEMStar_BekaertPTL"
 CASE_SET_NAME: "PolCurve_Bek~rtPTL_Update"
+data_directory: "input"
+mode_3d: false
+
+# PROJECT_DIRECTORY : '/mnt/data_raid/feierabend/AVL_FIRE/PEMWE/PEMStar_2'    # Project directory on the remote server
+# MODEL_NAME : 'PEMStar_BekaertPTL'                   # AVL FIRE model name
+# CASE_SET_NAME : 'PolCurve_Bek~HighMassFlow'        # Case set name within the model
+# CASE_NAME : None                                    # Set to None to search all cases, or specify a case name like 'Case_1'
+# data_directory: "results/3D_EnSight"
+# mode_3d: true

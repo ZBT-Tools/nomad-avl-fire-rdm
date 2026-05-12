@@ -132,3 +132,6 @@ dmypy.json
 
 variables.json
 *.hdf5
+*.hdf
+*.json
+tests/data/data

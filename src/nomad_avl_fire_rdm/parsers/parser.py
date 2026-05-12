@@ -1,3 +1,4 @@
+import os
 from typing import (
     TYPE_CHECKING,
 )
@@ -5,6 +6,7 @@ from typing import (
 import h5py
 
 from nomad_avl_fire_rdm.helpers.nomad_helpers import convert_to_hdf
+from nomad_avl_fire_rdm.schema_packages.schema_package import NewSchemaPackage
 
 if TYPE_CHECKING:
     from nomad.datamodel.datamodel import (
@@ -15,7 +17,6 @@ if TYPE_CHECKING:
     )
 
 import importlib
-import os
 from stat import S_ISDIR
 
 import dotenv
@@ -24,8 +25,12 @@ import paramiko
 from nomad.config import config
 from nomad.datamodel.metainfo.workflow import Workflow
 from nomad.parsing.parser import MatchingParser
-import json
 from src.asix_parser import parse_asix
+import yaml
+from src.ensight_to_xdmf import inspect_ensight_case
+import pyvista as pv
+import numpy as np
+import json
 
 # importing from the AVL-FIRE repo, not the "src" folder of this repo,
 import src.firem_name_parser_integration as firem_parser
@@ -34,46 +39,17 @@ from src.firem_name_parser_integration import (
     normalize_2d_results_columns,
     rename_2d_results_columns,
 )
+from src.utils import retrieve_avl_fire_data_paths, sftp_get_dir
+from pathlib import Path
+from src.ensight_to_xdmf import EnsightConversionConfig, convert_ensight_case
+from nomad.datamodel.metainfo.plot import PlotlyFigure, PlotSection
+import uuid
 
 importlib.reload(firem_parser)
 
 configuration = config.get_plugin_entry_point(
     "nomad_avl_fire_rdm.parsers:parser_entry_point"
 )
-
-
-def retrieve_avl_fire_data_paths(
-    sftp_client,
-    project_directory,
-    model_name,
-    case_set_name,
-    data_directory,
-    file_extension,
-    case_name=None,
-):
-    simulation_project_path = f"{project_directory}/simulation/project/"
-    if case_name is None:
-        print(
-            "case_name is None, searching for all cases in the specified model and case set..."
-        )
-        data_paths = []
-        for entry in sftp_client.listdir_attr(simulation_project_path):
-            if (
-                S_ISDIR(entry.st_mode)
-                and f"{model_name}.{case_set_name}." in entry.filename
-            ):
-                case_path = f"{simulation_project_path}{entry.filename}"
-                data_path = f"{case_path}/{data_directory}/{model_name}{file_extension}"
-                data_paths.append(data_path)
-                print(f"Found case: {entry.filename}, data path: {data_path}")
-    else:
-        case_set_path = f"{simulation_project_path}{model_name}.{case_set_name}"
-        data_path = (
-            f"{case_set_path}.{case_name}/{data_directory}/{model_name}{file_extension}"
-        )
-        print(f"Using specified case_name: {case_name}, data path: {data_path}")
-        data_paths = [f"{data_path}"]
-    return data_paths
 
 
 class NewParser(MatchingParser):
@@ -86,10 +62,16 @@ class NewParser(MatchingParser):
     ) -> None:
         logger.info("NewParser.parse", parameter=configuration.parameter)
         print(mainfile)
+        archive.metadata.upload_id = (
+            archive.m_context.upload_id if archive.m_context.upload_id else "unknown"
+        )
+        archive.metadata.entry_id = f"avl-{uuid.uuid4()}"
+
+        archive.data = NewSchemaPackage()
 
         dotenv.load_dotenv()
         with open(mainfile, "r") as f:
-            config = json.load(f)
+            config = yaml.safe_load(f)
 
         hostname = config["hostname"]
         user = config["USER"]
@@ -98,7 +80,8 @@ class NewParser(MatchingParser):
         MODEL_NAME = config["MODEL_NAME"]
         CASE_SET_NAME = config["CASE_SET_NAME"]
         CASE_NAME = None  # Set to None to search
-
+        data_directory = config["data_directory"]
+        mode_3d = config["mode_3d"] if "mode_3d" in config else False
         ssh_client = paramiko.SSHClient()
         # Automatically add the server's host key. For production, it's better to manage known_hosts explicitly.
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -123,9 +106,53 @@ class NewParser(MatchingParser):
             project_directory=PROJECT_DIRECTORY,
             model_name=MODEL_NAME,
             case_set_name=CASE_SET_NAME,
-            data_directory="input",
-            file_extension=".asix",
+            data_directory=data_directory,
+            file_extension=".asix" if not mode_3d else None,
         )
+        if mode_3d:
+            # sftp_get_dir(
+            #     sftp_client,
+            #     input_data_paths[3],
+            #     os.path.join("data", data_directory.split(".")[-1]),
+            # )
+            metadata = convert_ensight_case(
+                EnsightConversionConfig(
+                    case_file=Path(
+                        r"data/results/3D_EnSight/PEMStar_BekaertPTL_DOM_8_0.case"
+                    ),
+                    output_dir=Path(r"data/3D_EnSight_converted"),
+                    case_id="PEMStar_BekaertPTL_DOM_8_0",
+                )
+            )
+            xdmf_path = Path(r"data/3D_EnSight_converted/fields.xdmf")
+            reader = pv.get_reader(str(xdmf_path))
+            print(reader.time_values)
+            reader.set_active_time_point(1)
+            data = reader.read()
+            print(type(data))
+            print(data)
+
+            # If you want one mesh for plotting, combine the blocks first:
+            if isinstance(data, pv.MultiBlock):
+                blocks = [
+                    block for block in data if block is not None and block.n_cells > 0
+                ]
+                mesh = blocks[0] if len(blocks) == 1 else data.combine()
+            else:
+                mesh = data
+
+            field = "Flow_Temperature"
+            slice_xy = mesh.slice(normal="x")
+            plotter = pv.Plotter()
+            plotter.add_mesh(slice_xy, scalars=field, cmap="viridis")
+
+            # plotly_figure = PlotlyFigure(figure=plotter.)
+            # plotter.show(jupyter_backend="static")
+
+            # print(metadata)
+
+            return
+
         input_data_dicts_list = []
         for data_path in input_data_paths:
 
@@ -139,7 +166,10 @@ class NewParser(MatchingParser):
                 )
                 input_data_dicts_list.append(data)
 
-        input_data = input_data_dicts_list[0]
+        with open("data.json", "w") as f:
+            dict_to_dump = input_data_dicts_list[0]["AST_input_data"]
+            dict_to_dump.pop("AST_information")
+            json.dump(dict_to_dump, f, indent=4, default=str)
 
         results_2d_data_paths = retrieve_avl_fire_data_paths(
             sftp_client=sftp_client,
@@ -149,7 +179,7 @@ class NewParser(MatchingParser):
             data_directory="results",
             file_extension=".csv",
         )
-        data_path = results_2d_data_paths[0]
+
         result_2d_result_list = []
         result_2d = None
         for data_path in results_2d_data_paths:
@@ -164,8 +194,6 @@ class NewParser(MatchingParser):
 
             except Exception as e:
                 print(f"Error reading 2D results from {data_path}: {e}")
-
-        result_2d = result_2d_result_list[0]
 
         results_monitoring_data_paths = retrieve_avl_fire_data_paths(
             sftp_client=sftp_client,
@@ -197,12 +225,13 @@ class NewParser(MatchingParser):
 
         rules_path = load_yaml_from_github()
 
-        # Single case
-        mapping_df = normalize_2d_results_columns(result_2d, input_data, rules_path)
-        df_2d_renamed, rename_map = rename_2d_results_columns(
-            result_2d, input_data, rules_path
-        )
-        df_2d_renamed.reset_index(inplace=True)
-        print(df_2d_renamed)
-        convert_to_hdf(archive, "results_2d.hdf5", df_2d_renamed)
+        flat_df = pd.DataFrame()
+        for i in range(len(result_2d_result_list)):
+            renamed_data, _ = rename_2d_results_columns(
+                result_2d_result_list[i], input_data_dicts_list[i], rules_path
+            )
+            flat_df = pd.concat([flat_df, renamed_data], ignore_index=True)
+
+        convert_to_hdf(archive, "data.hdf", flat_df)
+        print(flat_df.head())
         archive.workflow2 = Workflow(name="test")

@@ -23,8 +23,8 @@ configuration = config.get_plugin_entry_point(
 m_package = SchemaPackage()
 
 
-class AxisResults(Schema):
-    axis_item = Quantity(type=JSON)
+class AsixResults(Schema):
+    asix_item = Quantity(type=JSON)
 
 
 class NewSchemaPackage(Schema):
@@ -32,7 +32,7 @@ class NewSchemaPackage(Schema):
     wall_time_since_start__mea_flow_channels = Quantity(type=float)
     current__electrical_conductor__cathode__terminal = Quantity(type=float)
     current_density_key = Quantity(type=int)
-    axis_results = Quantity(type=JSON, repeats=True)
+    asix_results = Quantity(type=JSON, repeats=True)
     name = Quantity(
         type=str, a_eln=ELNAnnotation(component=ELNComponentEnum.StringEditQuantity)
     )

@@ -6,7 +6,10 @@ from typing import (
 import h5py
 
 from nomad_avl_fire_rdm.helpers.nomad_helpers import convert_to_hdf
-from nomad_avl_fire_rdm.schema_packages.schema_package import NewSchemaPackage
+from nomad_avl_fire_rdm.schema_packages.schema_package import (
+    AsixResults,
+    NewSchemaPackage,
+)
 
 if TYPE_CHECKING:
     from nomad.datamodel.datamodel import (
@@ -166,8 +169,10 @@ class NewParser(MatchingParser):
                 )
                 input_data_dicts_list.append(data)
 
-        archive.data.asix_results = input_data_dicts_list
-
+        for i, data_dict in enumerate(input_data_dicts_list):
+            asix_result = AsixResults()
+            asix_result.asix_item = data_dict
+            archive.data.asix_results.append(asix_result)
         # with open("data.json", "w") as f:
         #     dict_to_dump = input_data_dicts_list[0]["AST_input_data"]
         #     dict_to_dump.pop("AST_information")

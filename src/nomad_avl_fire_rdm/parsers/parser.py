@@ -172,6 +172,7 @@ class NewParser(MatchingParser):
         for i, data_dict in enumerate(input_data_dicts_list):
             asix_result = AsixResults()
             asix_result.asix_item = data_dict
+
             archive.data.asix_results.append(asix_result)
         # with open("data.json", "w") as f:
         #     dict_to_dump = input_data_dicts_list[0]["AST_input_data"]

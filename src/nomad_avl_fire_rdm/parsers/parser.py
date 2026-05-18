@@ -168,11 +168,10 @@ class NewParser(MatchingParser):
 
         archive.data.asix_results = input_data_dicts_list
 
-        print("here")
-        with open("data.json", "w") as f:
-            dict_to_dump = input_data_dicts_list[0]["AST_input_data"]
-            dict_to_dump.pop("AST_information")
-            json.dump(dict_to_dump, f, indent=4, default=str)
+        # with open("data.json", "w") as f:
+        #     dict_to_dump = input_data_dicts_list[0]["AST_input_data"]
+        #     dict_to_dump.pop("AST_information")
+        #     json.dump(dict_to_dump, f, indent=4, default=str)
 
         results_2d_data_paths = retrieve_avl_fire_data_paths(
             sftp_client=sftp_client,

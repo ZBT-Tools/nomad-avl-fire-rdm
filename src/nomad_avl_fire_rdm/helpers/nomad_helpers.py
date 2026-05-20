@@ -14,3 +14,14 @@ def convert_to_hdf(archive, filename, dataframe):
                 # group.attrs["axes"] = "time"
                 # group.attrs["signal"] = "value"
                 # group.attrs["NX_class"] = "NXdata"
+
+
+def convert_to_hdf_multiple(archive, filename, dataframe_list):
+
+    with archive.m_context.raw_file(filename, "w") as newfile:
+        with h5py.File(newfile.name, "w") as hdf:
+            for i, dataframe in enumerate(dataframe_list):
+                for key in dataframe.columns:
+                    group = hdf.create_group(f"{i}/{key}")
+                    values = dataframe[key].tolist()
+                    group.create_dataset(key, data=values)

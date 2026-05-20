@@ -5,7 +5,10 @@ from typing import (
 
 import h5py
 
-from nomad_avl_fire_rdm.helpers.nomad_helpers import convert_to_hdf
+from nomad_avl_fire_rdm.helpers.nomad_helpers import (
+    convert_to_hdf,
+    convert_to_hdf_multiple,
+)
 from nomad_avl_fire_rdm.schema_packages.schema_package import (
     AsixResults,
     NewSchemaPackage,
@@ -203,6 +206,7 @@ class NewParser(MatchingParser):
             except Exception as e:
                 print(f"Error reading 2D results from {data_path}: {e}")
 
+        # Save as one HDF/ multiple HDF files.
         results_monitoring_data_paths = retrieve_avl_fire_data_paths(
             sftp_client=sftp_client,
             project_directory=PROJECT_DIRECTORY,
@@ -234,12 +238,16 @@ class NewParser(MatchingParser):
         rules_path = load_yaml_from_github()
 
         flat_df = pd.DataFrame()
+        original_dfs = []
         for i in range(len(result_2d_result_list)):
             renamed_data, _ = rename_2d_results_columns(
                 result_2d_result_list[i], input_data_dicts_list[i], rules_path
             )
+            original_dfs.append(renamed_data)
+            # [[], []]
             flat_df = pd.concat([flat_df, renamed_data], ignore_index=True)
 
         convert_to_hdf(archive, "data.hdf", flat_df)
-        print(flat_df.head())
+        convert_to_hdf_multiple(archive, "monitoring_data.hdf", original_dfs)
+
         archive.workflow2 = Workflow(name="test")

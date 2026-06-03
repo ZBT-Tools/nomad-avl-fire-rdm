@@ -135,3 +135,5 @@ variables.json
 *.hdf
 *.json
 tests/data/data
+
+*.h5

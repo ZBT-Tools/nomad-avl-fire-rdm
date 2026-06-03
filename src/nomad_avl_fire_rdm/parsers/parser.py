@@ -1,9 +1,14 @@
+from fileinput import filename
 import os
+import shutil
+import shutil
 from typing import (
     TYPE_CHECKING,
 )
 
 import h5py
+from nomad import archive
+from paramiko.agent import key
 
 from nomad_avl_fire_rdm.helpers.nomad_helpers import (
     convert_to_hdf,
@@ -31,12 +36,18 @@ import paramiko
 from nomad.config import config
 from nomad.datamodel.metainfo.workflow import Workflow
 from nomad.parsing.parser import MatchingParser
+from nomad.files import StagingUploadFiles
+from nomad.datamodel.context import ServerContext
 from src.asix_parser import parse_asix
 import yaml
-from src.ensight_to_xdmf import inspect_ensight_case
+from src.ensight_to_xdmf import (
+    convert_ensight_case,
+    EnsightConversionConfig,
+)
 import pyvista as pv
 import numpy as np
 import json
+import pandas as pd
 
 # importing from the AVL-FIRE repo, not the "src" folder of this repo,
 import src.firem_name_parser_integration as firem_parser
@@ -47,9 +58,13 @@ from src.firem_name_parser_integration import (
 )
 from src.utils import retrieve_avl_fire_data_paths, sftp_get_dir
 from pathlib import Path
-from src.ensight_to_xdmf import EnsightConversionConfig, convert_ensight_case
+
+# from src.ensight_to_xdmf import EnsightConversionConfig
+
 from nomad.datamodel.metainfo.plot import PlotlyFigure, PlotSection
 import uuid
+from nomad.datamodel.hdf5 import HDF5Reference
+from nomad_avl_fire_rdm.schema_packages.schema_package import EnsightCaseResults
 
 importlib.reload(firem_parser)
 
@@ -68,9 +83,13 @@ class NewParser(MatchingParser):
     ) -> None:
         logger.info("NewParser.parse", parameter=configuration.parameter)
         print(mainfile)
+
         archive.metadata.upload_id = (
             archive.m_context.upload_id if archive.m_context.upload_id else "unknown"
         )
+
+        upload_id = archive.metadata.upload_id
+
         archive.metadata.entry_id = f"avl-{uuid.uuid4()}"
 
         archive.data = NewSchemaPackage()
@@ -116,11 +135,12 @@ class NewParser(MatchingParser):
             file_extension=".asix" if not mode_3d else None,
         )
         if mode_3d:
-            # sftp_get_dir(
-            #     sftp_client,
-            #     input_data_paths[3],
-            #     os.path.join("data", data_directory.split(".")[-1]),
-            # )
+            print("3D mode enabled, processing EnSight data...")
+            sftp_get_dir(
+                sftp_client,
+                input_data_paths[3],
+                os.path.join("data", data_directory.split(".")[-1]),
+            )
             metadata = convert_ensight_case(
                 EnsightConversionConfig(
                     case_file=Path(
@@ -128,34 +148,14 @@ class NewParser(MatchingParser):
                     ),
                     output_dir=Path(r"data/3D_EnSight_converted"),
                     case_id="PEMStar_BekaertPTL_DOM_8_0",
-                )
+                ),
+                only_last_time=True,
             )
-            xdmf_path = Path(r"data/3D_EnSight_converted/fields.xdmf")
-            reader = pv.get_reader(str(xdmf_path))
-            print(reader.time_values)
-            reader.set_active_time_point(1)
-            data = reader.read()
-            print(type(data))
-            print(data)
+            saved_path = "data/3D_EnSight_converted/fields.h5"
+            filename = "fields.h5"
 
-            # If you want one mesh for plotting, combine the blocks first:
-            if isinstance(data, pv.MultiBlock):
-                blocks = [
-                    block for block in data if block is not None and block.n_cells > 0
-                ]
-                mesh = blocks[0] if len(blocks) == 1 else data.combine()
-            else:
-                mesh = data
-
-            field = "Flow_Temperature"
-            slice_xy = mesh.slice(normal="x")
-            plotter = pv.Plotter()
-            plotter.add_mesh(slice_xy, scalars=field, cmap="viridis")
-
-            # plotly_figure = PlotlyFigure(figure=plotter.)
-            # plotter.show(jupyter_backend="static")
-
-            # print(metadata)
+            with archive.m_context.raw_file(filename, "w") as newfile:
+                shutil.copyfile(saved_path, newfile.name)
 
             return
 

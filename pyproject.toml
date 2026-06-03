@@ -47,7 +47,8 @@ dev = [
     "python-dotenv",
     "pandas",
     "paramiko",
-    "avl-fire-rdm @ git+https://github.com/ZBT-Tools/AVL-FIRE-RDM.git"
+    "avl-fire-rdm @ git+https://github.com/ZBT-Tools/AVL-FIRE-RDM.git@78f235ff65481fb3a282155425747b47ab1890f8",
+    "tables",
 ]
 
 [tool.uv]

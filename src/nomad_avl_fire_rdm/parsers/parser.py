@@ -48,6 +48,7 @@ import pyvista as pv
 import numpy as np
 import json
 import pandas as pd
+import os
 
 # importing from the AVL-FIRE repo, not the "src" folder of this repo,
 import src.firem_name_parser_integration as firem_parser
@@ -155,8 +156,8 @@ class NewParser(MatchingParser):
             filename = "fields.h5"
 
             with archive.m_context.raw_file(filename, "w") as newfile:
-                shutil.copyfile(saved_path, newfile.name)
-
+                shutil.move(saved_path, newfile.name)
+                shutil.rmtree("data/3D_EnSight_converted/")
             return
 
         input_data_dicts_list = []

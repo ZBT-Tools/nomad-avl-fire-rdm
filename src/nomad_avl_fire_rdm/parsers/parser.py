@@ -10,6 +10,7 @@ import h5py
 from nomad import archive
 from paramiko.agent import key
 
+from nomad_avl_fire_rdm.helpers.handle_3d_mode import handle_3d_mode
 from nomad_avl_fire_rdm.helpers.nomad_helpers import (
     convert_to_hdf,
     convert_to_hdf_multiple,
@@ -136,28 +137,12 @@ class NewParser(MatchingParser):
             file_extension=".asix" if not mode_3d else None,
         )
         if mode_3d:
-            print("3D mode enabled, processing EnSight data...")
-            sftp_get_dir(
-                sftp_client,
-                input_data_paths[3],
-                os.path.join("data", data_directory.split(".")[-1]),
+            handle_3d_mode(
+                archive=archive,
+                data_directory=data_directory,
+                input_data_paths=input_data_paths,
+                sftp_client=sftp_client,
             )
-            metadata = convert_ensight_case(
-                EnsightConversionConfig(
-                    case_file=Path(
-                        r"data/results/3D_EnSight/PEMStar_BekaertPTL_DOM_8_0.case"
-                    ),
-                    output_dir=Path(r"data/3D_EnSight_converted"),
-                    case_id="PEMStar_BekaertPTL_DOM_8_0",
-                ),
-                only_last_time=True,
-            )
-            saved_path = "data/3D_EnSight_converted/fields.h5"
-            filename = "fields.h5"
-
-            with archive.m_context.raw_file(filename, "w") as newfile:
-                shutil.move(saved_path, newfile.name)
-                shutil.rmtree("data/3D_EnSight_converted/")
             return
 
         input_data_dicts_list = []

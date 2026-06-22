@@ -32,7 +32,6 @@ def save_asix_files_to_storage(
 
     for index, data_path in enumerate(sftp_filenames):
         with sftp_client.open(data_path) as file:
-            print(file)
             if hasattr(file, "read"):
                 try:
                     content = file.read()
@@ -42,16 +41,14 @@ def save_asix_files_to_storage(
                     file_name = os.path.basename(file_path)
                     file_name = f"{index}_{file_name}"
                     # create a blank file first. Without it the code will fail.
-                    with open(file_name, "wb") as file_to_write:
-                        file_to_write.write(b"")
 
-                    with archive.m_context.raw_file(file_name) as newfile:
-                        print(newfile.name)
-                    with open(newfile.name, "wb") as file_to_write:
-                        try:
-                            file_to_write.write(content)
-                        except Exception as e:
-                            print("Error at index", index, " error ", e)
+                    with archive.m_context.raw_file(file_name, "w") as newfile:
+
+                        with open(newfile.name, "wb") as file_to_write:
+                            try:
+                                file_to_write.write(content)
+                            except Exception as e:
+                                print("Error at index", index, " error ", e)
 
                 except Exception as e:
                     print("Error at index: ", index, "with error ", e)

@@ -1,19 +1,12 @@
-from fileinput import filename
-import os
-import shutil
-import shutil
 from typing import (
     TYPE_CHECKING,
 )
-
-import h5py
-from nomad import archive
-from paramiko.agent import key
 
 from nomad_avl_fire_rdm.helpers.handle_3d_mode import handle_3d_mode
 from nomad_avl_fire_rdm.helpers.nomad_helpers import (
     convert_to_hdf,
     convert_to_hdf_multiple,
+    save_asix_files_to_storage,
 )
 from nomad_avl_fire_rdm.schema_packages.schema_package import (
     AsixResults,
@@ -29,7 +22,6 @@ if TYPE_CHECKING:
     )
 
 import importlib
-from stat import S_ISDIR
 
 import dotenv
 import pandas as pd
@@ -37,36 +29,22 @@ import paramiko
 from nomad.config import config
 from nomad.datamodel.metainfo.workflow import Workflow
 from nomad.parsing.parser import MatchingParser
-from nomad.files import StagingUploadFiles
-from nomad.datamodel.context import ServerContext
 from src.asix_parser import parse_asix
 import yaml
-from src.ensight_to_xdmf import (
-    convert_ensight_case,
-    EnsightConversionConfig,
-)
-import pyvista as pv
-import numpy as np
-import json
 import pandas as pd
-import os
 
 # importing from the AVL-FIRE repo, not the "src" folder of this repo,
 import src.firem_name_parser_integration as firem_parser
 from src.firem_name_parser_integration import (
     load_yaml_from_github,
-    normalize_2d_results_columns,
     rename_2d_results_columns,
 )
 from src.utils import retrieve_avl_fire_data_paths, sftp_get_dir
-from pathlib import Path
 
 # from src.ensight_to_xdmf import EnsightConversionConfig
 
-from nomad.datamodel.metainfo.plot import PlotlyFigure, PlotSection
+
 import uuid
-from nomad.datamodel.hdf5 import HDF5Reference
-from nomad_avl_fire_rdm.schema_packages.schema_package import EnsightCaseResults
 
 importlib.reload(firem_parser)
 
@@ -143,12 +121,13 @@ class NewParser(MatchingParser):
                 input_data_paths=input_data_paths,
                 sftp_client=sftp_client,
             )
+
             return
 
         input_data_dicts_list = []
-        for data_path in input_data_paths:
-
+        for index, data_path in enumerate(input_data_paths):
             with sftp_client.open(data_path, "r") as data_file:
+
                 # data = remote_file.read()
                 data = parse_asix(
                     data_file,
@@ -158,15 +137,15 @@ class NewParser(MatchingParser):
                 )
                 input_data_dicts_list.append(data)
 
+        save_asix_files_to_storage(
+            archive=archive, sftp_client=sftp_client, sftp_filenames=input_data_paths
+        )
+
         for i, data_dict in enumerate(input_data_dicts_list):
             asix_result = AsixResults()
             asix_result.asix_item = data_dict
 
             archive.data.asix_results.append(asix_result)
-        # with open("data.json", "w") as f:
-        #     dict_to_dump = input_data_dicts_list[0]["AST_input_data"]
-        #     dict_to_dump.pop("AST_information")
-        #     json.dump(dict_to_dump, f, indent=4, default=str)
 
         results_2d_data_paths = retrieve_avl_fire_data_paths(
             sftp_client=sftp_client,

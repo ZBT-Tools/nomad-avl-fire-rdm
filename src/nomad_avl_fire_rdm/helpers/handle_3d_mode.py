@@ -42,6 +42,7 @@ def _archive_h5_file(archive, saved_path_h5, filename):
 
 
 def rename_h5_keys(saved_path_h5, rename_dict):
+
     with h5py.File(saved_path_h5, "r+") as h5_file:
 
         for old_key, new_name in rename_dict.items():

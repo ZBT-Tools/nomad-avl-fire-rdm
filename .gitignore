@@ -137,3 +137,4 @@ variables.json
 tests/data/data
 
 *.h5
+*.asix
